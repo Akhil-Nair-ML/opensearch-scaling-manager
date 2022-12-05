@@ -76,6 +76,8 @@ class Simulator:
     def run(self, duration_minutes):
         resultant_cluster_objects = []
         data_x, data_y = self.aggregate_data(duration_minutes)
+        if not os.path.exists(constants.DATA_FOLDER):
+            os.makedirs(constants.DATA_FOLDER)
         for y in data_y:
             self.cluster._ingestion_rate = y
             self.cluster.cpu_usage_percent = self.cpu_used_for_ingestion(y)
@@ -96,7 +98,29 @@ class Simulator:
         if elapsed_time == -1:
             now = datetime.now()
             date_obj = now - timedelta(
-                minutes=int(now.minute / self.frequency_minutes) * self.frequency_minutes,
+                minutes=now.minute % self.frequency_minutes,
+                seconds=now.second,
+                microseconds=now.microsecond
+            )
+            for duration in range(0, duration_minutes, self.frequency_minutes):
+
+                data_points_file_names.append(
+                    (date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+        # Todo: implement logic when elapsed time is passed
+
+        for file_name in reversed(data_points_file_names):
+            with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
+                cluster_objects.append(pickle.load(f))
+
+        return sum([cluster.__getattribute__(stat_name) for cluster in cluster_objects]) / len(cluster_objects)
+
+    def get_cluster_min(self, stat_name, duration_minutes, elapsed_time: int = -1):
+        cluster_objects = []
+        data_points_file_names = []
+        if elapsed_time == -1:
+            now = datetime.now()
+            date_obj = now - timedelta(
+                minutes=now.minute % self.frequency_minutes,
                 seconds=now.second,
                 microseconds=now.microsecond
             )
@@ -110,8 +134,64 @@ class Simulator:
             with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
                 cluster_objects.append(pickle.load(f))
 
-        return sum([cluster.__getattribute__(stat_name) for cluster in cluster_objects]) / len(cluster_objects)
+        return min([cluster.__getattribute__(stat_name) for cluster in cluster_objects])
 
-    # def get_cluster_current(self, elapsed_time_minutes=-1):
-    #     if elapsed_time_minutes == -1:
-    #         elapsed_time_minutes =
+    def get_cluster_max(self, stat_name, duration_minutes, elapsed_time: int = -1):
+        cluster_objects = []
+        data_points_file_names = []
+        if elapsed_time == -1:
+            now = datetime.now()
+            date_obj = now - timedelta(
+                minutes=now.minute % self.frequency_minutes,
+                seconds=now.second,
+                microseconds=now.microsecond
+            )
+            for duration in range(0, duration_minutes, self.frequency_minutes):
+                data_points_file_names.append(
+                    (date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+                print((date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+        # Todo: implement logic when elapsed time is passed
+
+        for file_name in reversed(data_points_file_names):
+            with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
+                cluster_objects.append(pickle.load(f))
+
+        return max([cluster.__getattribute__(stat_name) for cluster in cluster_objects])
+
+    def get_cluster_current(self, stat_name, elapsed_time_minutes=-1):
+        if elapsed_time_minutes == -1:
+            now = datetime.now()
+            date_obj = now - timedelta(
+                minutes=now.minute % self.frequency_minutes,
+                seconds=now.second,
+                microseconds=now.microsecond
+            )
+            file_name = date_obj.strftime(constants.DATE_TIME_FORMAT)
+            with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
+                cluster_object = pickle.load(f)
+                return cluster_object.__getattribute__(stat_name)
+
+    def get_cluster_violated_count(self, stat_name, duration_minutes, threshold, elapsed_time: int = -1):
+        cluster_objects = []
+        data_points_file_names = []
+        if elapsed_time == -1:
+            now = datetime.now()
+            date_obj = now - timedelta(
+                minutes=now.minute % self.frequency_minutes,
+                seconds=now.second,
+                microseconds=now.microsecond
+            )
+            for duration in range(0, duration_minutes, self.frequency_minutes):
+                data_points_file_names.append(
+                    (date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+                print((date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+        # Todo: implement logic when elapsed time is passed
+
+        for file_name in reversed(data_points_file_names):
+            with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
+                cluster_objects.append(pickle.load(f))
+        violatioed_count = 0
+        for cluster in cluster_objects:
+            if cluster.__getattribute__(stat_name) > threshold:
+                violatioed_count += 1
+        return violatioed_count
