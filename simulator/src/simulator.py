@@ -96,7 +96,7 @@ class Simulator:
         if elapsed_time == -1:
             now = datetime.now()
             date_obj = now - timedelta(
-                minutes=now.minute % self.frequency_minutes,
+                minutes=int(now.minute / self.frequency_minutes) * self.frequency_minutes,
                 seconds=now.second,
                 microseconds=now.microsecond
             )
