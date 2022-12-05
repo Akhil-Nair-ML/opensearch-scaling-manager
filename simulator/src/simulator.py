@@ -1,5 +1,10 @@
+import os
 import copy
+import pickle
+import random
+from datetime import datetime, timedelta
 
+import constants
 from cluster import Cluster
 from data_ingestion import DataIngestion
 from search import Search
@@ -44,20 +49,69 @@ class Simulator:
         return x, y
 
     def cpu_used_for_ingestion(self, ingestion):
-        return min(ingestion/self.cluster.total_nodes_count * 0.075 * 100, 100)
+        return min(ingestion / self.cluster.total_nodes_count * random.randrange(1, 15) / 100 * 100, 100)
 
     def memory_used_for_ingestion(self, ingestion):
-        return min(ingestion / self.cluster.total_nodes_count * 0.012 * 100, 100)
+        return min(ingestion / self.cluster.total_nodes_count * random.randrange(5, 12) / 100 * 100, 100)
 
-    def cluster_state_for_ingestion(self):
-        pass
+    def cluster_state_for_ingestion(self, ingestion):
+        if ingestion < constants.HIGH_INGESTION_RATE_GB_PER_HOUR:
+            return random.choice([constants.CLUSTER_STATE_GREEN] * 10 + [constants.CLUSTER_STATE_YELLOW])
+        if self.cluster.status == constants.CLUSTER_STATE_RED:
+            return random.choice([constants.CLUSTER_STATE_YELLOW, constants.CLUSTER_STATE_RED])
+        return random.choice(
+            [constants.CLUSTER_STATE_GREEN] * 5 + [constants.CLUSTER_STATE_YELLOW] * 3 + [constants.CLUSTER_STATE_RED])
+
+    def file_name_for_pickling(self, passed_minutes: int, passed_days: int = 0):
+        now = datetime.now()
+        date_obj = now - timedelta(
+            hours=now.hour,
+            minutes=now.minute,
+            seconds=now.second,
+            microseconds=now.microsecond
+        )
+        resultant_time = date_obj + timedelta(minutes=passed_minutes, days=passed_days)
+        return resultant_time.strftime(constants.DATE_TIME_FORMAT)
 
     def run(self, duration_minutes):
         resultant_cluster_objects = []
         data_x, data_y = self.aggregate_data(duration_minutes)
         for y in data_y:
+            self.cluster._ingestion_rate = y
             self.cluster.cpu_usage_percent = self.cpu_used_for_ingestion(y)
             self.cluster.memory_usage_percent = self.memory_used_for_ingestion(y)
+            self.cluster.status = self.cluster_state_for_ingestion(y)
+            self.elapsed_time_minutes += self.frequency_minutes
             # Todo: simulate effect on remaining cluster parameters 
             resultant_cluster_objects.append(copy.deepcopy(self.cluster))
+            with open(os.path.join(constants.DATA_FOLDER, self.file_name_for_pickling(self.elapsed_time_minutes)),
+                      'wb') as f:
+                pickle.dump(self.cluster, f)
+
         return resultant_cluster_objects
+
+    def get_cluster_average(self, stat_name, duration_minutes, elapsed_time: int = -1):
+        cluster_objects = []
+        data_points_file_names = []
+        if elapsed_time == -1:
+            now = datetime.now()
+            date_obj = now - timedelta(
+                minutes=now.minute % self.frequency_minutes,
+                seconds=now.second,
+                microseconds=now.microsecond
+            )
+            for duration in range(0, duration_minutes, self.frequency_minutes):
+                data_points_file_names.append(
+                    (date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+                print((date_obj - timedelta(minutes=duration)).strftime(constants.DATE_TIME_FORMAT))
+        # Todo: implement logic when elapsed time is passed
+
+        for file_name in reversed(data_points_file_names):
+            with open(os.path.join(constants.DATA_FOLDER, file_name), 'rb') as f:
+                cluster_objects.append(pickle.load(f))
+
+        return sum([cluster.__getattribute__(stat_name) for cluster in cluster_objects]) / len(cluster_objects)
+
+    # def get_cluster_current(self, elapsed_time_minutes=-1):
+    #     if elapsed_time_minutes == -1:
+    #         elapsed_time_minutes =

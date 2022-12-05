@@ -31,7 +31,7 @@ class DataIngestion:
         print('aggregating random patterns')
         # positions to inter/extrapolate
         intervals = int(duration_minutes / frequency_minutes) + 1
-        random_set = np.random.randint(0, 5, size=intervals)
+        random_set = np.random.randint(0, self.randomness_percentage, size=intervals)
         x = np.linspace(0, duration_minutes, intervals)
         return x, random_set
 

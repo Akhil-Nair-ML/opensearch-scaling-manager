@@ -29,7 +29,7 @@ data_ingestion:
   - position: 5
     time_hh_mm_ss: '23_00_00'
     ingestion_rate_gb_per_hr: 5
-  randomness_percentage: 5
+  randomness_percentage: 10
 
 searches:
 - type: simple
