@@ -6,7 +6,6 @@ from cluster import Cluster
 from data_ingestion import State, DataIngestion
 
 
-
 app = Flask(__name__)
 
 
@@ -30,14 +29,13 @@ def current(stat_name):
     )
 
 
-@app.route('/stats/violated/<string:stat_name>/<int:duration>/<int:threshold>')
+@app.route('/stats/violated/<string:stat_name>/<int:duration>/<float:threshold>')
 def violated_count(stat_name, duration, threshold):
     return jsonify(
         {
             "ViolatedCount": sim.get_cluster_violated_count(constants.STAT_REQUEST[stat_name], duration, threshold)
         }
     )
-
 
 
 configs = parse_config('config.yaml')
@@ -49,6 +47,7 @@ data_function = DataIngestion(all_states, randomness_percentage)
 cluster = Cluster(**configs.stats)
 
 sim = Simulator(cluster, data_function, configs.searches, configs.data_generation_interval_minutes, 0)
-# generate the data points
+# generate the data points from simulator
 sim.run(24*60)
-app.run(port=5000)
+# start serving the apis
+app.run(port=constants.APP_PORT)

@@ -15,6 +15,8 @@ DATE_TIME_FORMAT = '%y-%m-%dT%H_%M_%S'
 
 STAT_REQUEST = {
     'cpu': 'cpu_usage_percent',
-    'memory': 'memory_usage_percent',
+    'mem': 'memory_usage_percent',
     'status': 'status'
 }
+
+APP_PORT = 5000

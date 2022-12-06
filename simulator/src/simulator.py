@@ -171,7 +171,13 @@ class Simulator:
                 cluster_object = pickle.load(f)
                 return cluster_object.__getattribute__(stat_name)
 
-    def get_cluster_violated_count(self, stat_name, duration_minutes, threshold, elapsed_time: int = -1):
+    def get_cluster_violated_count(
+            self,
+            stat_name: str,
+            duration_minutes: int,
+            threshold: float,
+            elapsed_time: int = -1
+    ):
         cluster_objects = []
         data_points_file_names = []
         if elapsed_time == -1:
